@@ -30,6 +30,22 @@ class RewriteOutputTest < Test::Unit::TestCase
     assert_equal 2, d.instance.rules.size
   end
 
+  def test_configure_file
+    # the additional rule element should be ignored because a rule file is specified
+    d = create_driver(%[
+      remove_prefix test
+      add_prefix    filtered
+      rule_file     test/rule_files/test_rules.json
+      <rule>
+        key qux
+      </rule>
+    ])
+
+    assert_equal "test",     d.instance.remove_prefix
+    assert_equal "filtered", d.instance.add_prefix
+    assert_equal 2, d.instance.rules.size
+  end
+
   def test_rewrite_replace
     d1 = create_driver(%[
       <rule>
@@ -50,6 +66,26 @@ class RewriteOutputTest < Test::Unit::TestCase
         pattern (/[^/]+)\\?([^=]+)=(\\d)
         replace \\1/\\2/\\3
       </rule>
+    ])
+
+    assert_equal(
+      [ "test", { "path" => "/foo/bar/1" } ],
+      d2.instance.rewrite("test", { "path" => "/foo?bar=1" })
+    )
+  end
+
+  def test_rewrite_replace_file
+    d1 = create_driver(%[
+      rule_file     test/rule_files/test_rules_rewrite.1.json
+    ])
+
+    assert_equal(
+      [ "test", { "path" => "/foo" } ],
+      d1.instance.rewrite("test", { "path" => "/foo?bar=1" })
+    )
+
+    d2 = create_driver(%[
+      rule_file     test/rule_files/test_rules_rewrite.2.json
     ])
 
     assert_equal(

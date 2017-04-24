@@ -9,6 +9,7 @@ module Fluent
 
     config_param :remove_prefix,   :string, :default => nil
     config_param :add_prefix,      :string, :default => nil
+    config_param :rule_file,       :string, :default => nil
     config_param :enable_warnings, :bool,   :default => false
 
     attr_reader  :rules
@@ -24,14 +25,27 @@ module Fluent
         @added_prefix_string = @add_prefix + '.'
       end
 
-      @rules = conf.elements.select {|element| element.name == 'rule' }.map do |element|
-        rule = {}
-        element.keys.each do |key|
-          # read and throw away to supress unread configuration warning
-          rule[key] = element[key]
+      if @rule_file
+        require 'json'
+        @rules = JSON.parse(File.read(@rule_file)).map do |element|
+          rule = {}
+          element.keys.each do |key|
+            # read and throw away to supress unread configuration warning
+            rule[key] = element[key]
+          end
+          rule["regex"] = Regexp.new(element["pattern"]) if element.has_key?("pattern")
+          rule
         end
-        rule["regex"] = Regexp.new(element["pattern"]) if element.has_key?("pattern")
-        rule
+      else
+        @rules = conf.elements.select {|element| element.name == 'rule' }.map do |element|
+          rule = {}
+          element.keys.each do |key|
+            # read and throw away to supress unread configuration warning
+            rule[key] = element[key]
+          end
+          rule["regex"] = Regexp.new(element["pattern"]) if element.has_key?("pattern")
+          rule
+        end
       end
     end
 
